@@ -48,8 +48,6 @@ Run the script by executing the following:
 python app_packager_gui.py
 ```
 
-Or by double-clicking.
-
 This will launch the GUI application.
 
 ### 4. Using the GUI:
