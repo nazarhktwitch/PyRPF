@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QApplication, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QMessageBox, QWidget, QCheckBox, QProgressBar
 )
 
-def create_exe_with_dependencies(folder_path, main_exe, output_name, delete_temp_files, save_location, additional_params, icon_path, progress_callback):
+def create_exe_with_dependencies(folder_path, main_exe, output_name, unpack_folder_name, delete_temp_files, save_location, additional_params, icon_path, progress_callback):
     try:
         # Убедимся, что целевая папка существует
         output_folder = save_location
@@ -44,31 +44,46 @@ import sys
 import shutil
 import subprocess
 
-def main():
+def unpack_data():
     # Папка, в которую будут распаковываться файлы
-    unpack_dir = '{output_folder}'
+    unpack_dir = os.path.join(os.getcwd(), '{unpack_folder_name}')
 
-    # Убедимся, что целевая папка существует
-    if not os.path.exists(unpack_dir):
+    # Если папка уже существует, выводим предупреждение
+    if os.path.exists(unpack_dir):
+        print(f"Warning: Folder '{{unpack_folder_name}}' already exists!")
+        input("Press Enter to continue or close this window to abort...")
+    else:
         os.makedirs(unpack_dir)
 
     # Извлекаем данные из текущего исполнимого файла
     current_dir = os.path.dirname(sys.argv[0])
-    target_dir = os.path.join(current_dir, '{folder_name}')  # Папка с вашим приложением
 
-    # Копируем только файлы из нужной папки
+    if hasattr(sys, '_MEIPASS'):
+        # Если исполнимый файл был упакован с PyInstaller, данные находятся в временной директории
+        data_dir = sys._MEIPASS
+    else:
+        # Если это обычный запуск из исходных файлов
+        data_dir = current_dir
+
+    target_dir = os.path.join(data_dir, '{folder_name}')  # Папка с вашими данными
+
+    # Копируем все файлы из папки в целевую папку
     for item in os.listdir(target_dir):
         src_path = os.path.join(target_dir, item)
         dest_path = os.path.join(unpack_dir, item)
 
         if os.path.isdir(src_path):
-            shutil.copytree(src_path, dest_path)
+            shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
         else:
             shutil.copy2(src_path, dest_path)
 
-    # Запускаем основной исполнимый файл из распакованной папки
-    exe_path = os.path.join(unpack_dir, '{folder_name}', '{main_exe}')
-    subprocess.run([exe_path], cwd=os.path.join(unpack_dir, '{folder_name}'))
+def main():
+    # Распаковываем данные
+    unpack_data()
+
+    # Запускаем основной исполнимый файл
+    exe_path = os.path.join(os.getcwd(), '{unpack_folder_name}', '{main_exe}')
+    subprocess.run([exe_path], cwd=os.path.join(os.getcwd(), '{unpack_folder_name}'))
 
 if __name__ == "__main__":
     main()
@@ -77,19 +92,19 @@ if __name__ == "__main__":
         # Создаем команду для PyInstaller
         pyinstaller_cmd = [
             "pyinstaller",
-            "--onefile",  # Собираем один файл
-            "--add-data", f"{temp_build_dir}{os.pathsep}.",  # Добавляем всю временную папку
+            "--onefile",  # Собираем один файл .exe
+            "--add-data", f"{temp_build_dir}{os.pathsep}{folder_name}",  # Указываем путь папки для встраивания в .exe
             "--name", output_name,
             loader_script
         ]
         
-        # Добавляем иконку, если указана
-        if icon_path:
-            pyinstaller_cmd.append(f"--icon={icon_path}")
-        
         # Добавляем дополнительные параметры, если есть
         if additional_params:
             pyinstaller_cmd.extend(additional_params.split(";"))
+
+        # Добавляем иконку, если указан путь
+        if icon_path and os.path.exists(icon_path):
+            pyinstaller_cmd.extend(["--icon", icon_path])
 
         # Обновляем прогресс-бар для сборки с PyInstaller
         process = subprocess.Popen(pyinstaller_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -119,6 +134,7 @@ if __name__ == "__main__":
         print(f"Error: {e}")
         return False
 
+
 class AppPackager(QWidget):
     def __init__(self):
         super().__init__()
@@ -126,7 +142,7 @@ class AppPackager(QWidget):
 
     def init_ui(self):
         self.setWindowTitle("PyRPF - Application Packager")
-        self.setGeometry(100, 100, 400, 400)
+        self.setGeometry(100, 100, 400, 450)
 
         layout = QVBoxLayout()
 
@@ -139,6 +155,12 @@ class AppPackager(QWidget):
         self.browse_button = QPushButton("Browse")
         self.browse_button.clicked.connect(self.browse_folder)
         layout.addWidget(self.browse_button)
+
+        self.unpack_folder_label = QLabel("Enter the name of the unpack folder:")
+        layout.addWidget(self.unpack_folder_label)
+
+        self.unpack_folder_input = QLineEdit()
+        layout.addWidget(self.unpack_folder_input)
 
         self.main_exe_label = QLabel("Select the main executable (if more than one .exe exists):")
         layout.addWidget(self.main_exe_label)
@@ -168,16 +190,6 @@ class AppPackager(QWidget):
         self.additional_params_input = QLineEdit()
         layout.addWidget(self.additional_params_input)
 
-        self.icon_label = QLabel("Select an icon for the executable (Leave empty for default):")
-        layout.addWidget(self.icon_label)
-
-        self.icon_input = QLineEdit()
-        layout.addWidget(self.icon_input)
-
-        self.browse_icon_button = QPushButton("Browse for Icon")
-        self.browse_icon_button.clicked.connect(self.browse_icon)
-        layout.addWidget(self.browse_icon_button)
-
         self.delete_temp_files_checkbox = QCheckBox("Delete temporary files after packaging (.spec, build, dist)")
         layout.addWidget(self.delete_temp_files_checkbox)
 
@@ -197,34 +209,35 @@ class AppPackager(QWidget):
             self.check_exes(folder)
 
     def check_exes(self, folder_path):
-        # Check for .exe files in the folder
-        exe_files = [f for f in os.listdir(folder_path) if f.endswith('.exe')]
+        # Ищем все исполнимые файлы (.exe, .bat, .py) в папке
+        exe_files = [f for f in os.listdir(folder_path) if f.endswith(('.exe', '.bat', '.py'))]
+
+        # Если найден один файл, устанавливаем его как основной
         if len(exe_files) == 1:
             self.main_exe_input.setText(exe_files[0])
         elif len(exe_files) > 1:
-            self.main_exe_input.clear()
+            self.main_exe_input.clear()  # Если найдено несколько файлов, очищаем поле для ввода
 
     def browse_save_location(self):
         save_location = QFileDialog.getExistingDirectory(self, "Select save location for the executable")
         if save_location:
             self.save_location_input.setText(save_location)
 
-    def browse_icon(self):
-        icon_file, _ = QFileDialog.getOpenFileName(self, "Select an Icon", "", "Icon Files (*.ico);;All Files (*)")
-        if icon_file:
-            self.icon_input.setText(icon_file)
-
     def package_app(self):
         folder_path = self.folder_input.text()
         main_exe = self.main_exe_input.text()
         output_name = self.output_input.text()
+        unpack_folder_name = self.unpack_folder_input.text()
         save_location = self.save_location_input.text()
         additional_params = self.additional_params_input.text()
-        icon_path = self.icon_input.text()
         delete_temp_files = self.delete_temp_files_checkbox.isChecked()
 
         if not folder_path or not os.path.exists(folder_path):
             QMessageBox.critical(self, "Error", "Please provide an existing folder with your application!")
+            return
+
+        if not unpack_folder_name:
+            QMessageBox.critical(self, "Error", "Please provide a name for the unpack folder!")
             return
 
         if not output_name:
@@ -240,7 +253,7 @@ class AppPackager(QWidget):
             return
 
         # Запуск упаковки с прогрессом
-        success = create_exe_with_dependencies(folder_path, main_exe, output_name, delete_temp_files, save_location, additional_params, icon_path, self.update_progress)
+        success = create_exe_with_dependencies(folder_path, main_exe, output_name, unpack_folder_name, delete_temp_files, save_location, additional_params, icon_path, self.update_progress)
         if success:
             QMessageBox.information(self, "Success", f"Application '{output_name}.exe' has been successfully created!")
         else:
