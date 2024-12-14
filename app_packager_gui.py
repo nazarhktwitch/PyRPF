@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QApplication, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QMessageBox, QWidget, QCheckBox, QProgressBar
 )
 
-def create_exe_with_dependencies(folder_path, main_exe, output_name, unpack_folder_name, delete_temp_files, save_location, additional_params, icon_path, progress_callback):
+def create_exe_with_dependencies(folder_path, main_exe, output_name, unpack_folder_name, delete_temp_files, save_location, additional_params, icon_path, update_progress):
     try:
         # Убедимся, что целевая папка существует
         output_folder = save_location
@@ -108,9 +108,10 @@ if __name__ == "__main__":
 
         # Обновляем прогресс-бар для сборки с PyInstaller
         process = subprocess.Popen(pyinstaller_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Correct the use of update_progress, which was passed as an argument
         for line in tqdm(process.stdout, desc="Building executable", unit="line"):
-            if progress_callback:
-                progress_callback(line.decode())
+            if update_progress:
+                update_progress(line.decode())
 
         process.wait()  # Ждем завершения процесса сборки
 
@@ -253,7 +254,7 @@ class AppPackager(QWidget):
             return
 
         # Запуск упаковки с прогрессом
-        success = create_exe_with_dependencies(folder_path, main_exe, output_name, unpack_folder_name, delete_temp_files, save_location, additional_params, icon_path, self.update_progress)
+        success = create_exe_with_dependencies(folder_path, main_exe, output_name, unpack_folder_name, delete_temp_files, save_location, additional_params, icon_path=None, update_progress=self.update_progress)
         if success:
             QMessageBox.information(self, "Success", f"Application '{output_name}.exe' has been successfully created!")
         else:
