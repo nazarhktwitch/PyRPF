@@ -1,9 +1,5 @@
 # **PyRPF - Application Packager**
 
-## Why is it better than SFX archive?
-
-The program packs everything into one file and does NOT unpack it, which means that access to the original files will not be obtained, in addition, an additional directory with unnecessary files will not be created.
-
 **PyRPF** (Python Resource Packing Framework) is a simple Python tool that allows you to create a standalone executable (`.exe`) from your Python application. The program bundles your application files and dependencies into a single executable file using **PyInstaller**. It provides an easy-to-use graphical interface to help you select the folder containing your Python application and specify the output file name.
 
 ## **Features**:
