@@ -2,49 +2,40 @@ import os
 import shutil
 import sys
 import subprocess
-import tempfile
+from tqdm import tqdm
 from PySide6.QtWidgets import (
     QApplication, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QMessageBox, QWidget, QCheckBox, QProgressBar
 )
-from tqdm import tqdm
 
-def create_exe_with_dependencies(folder_path, main_exe, output_name, delete_temp_files, save_location, additional_params, icon_path):
+def create_exe_with_dependencies(folder_path, main_exe, output_name, delete_temp_files, save_location, additional_params, icon_path, progress_callback):
     try:
-        # Create a folder named after the output folder name
-        output_folder = os.path.join(save_location, output_name)
+        # Убедимся, что целевая папка существует
+        output_folder = save_location
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
 
-        # Create temporary folder for the build
+        # Временная папка для сборки
         temp_build_dir = os.path.join(os.getcwd(), "build_temp")
         if os.path.exists(temp_build_dir):
             shutil.rmtree(temp_build_dir)
         os.makedirs(temp_build_dir)
 
-        # Copy all files from the source folder to the temporary build folder with progress
-        files = []
-        for item in os.listdir(folder_path):
-            src_path = os.path.join(folder_path, item)
-            if os.path.isdir(src_path):
-                files.append((src_path, True))  # Add directories
-            else:
-                files.append((src_path, False))  # Add files
+        # Копируем саму папку (например, betterjoy) в временную директорию
+        folder_name = os.path.basename(folder_path)  # Берем имя папки
+        files_to_copy = []
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                files_to_copy.append(os.path.join(root, file))
 
-        # Create a progress bar to display the copying process
-        progress_bar = QProgressBar()
-        progress_bar.setMaximum(len(files))
-        progress_bar.setMinimum(0)
-        progress_bar.setValue(0)
+        # Прогресс-бар для копирования файлов
+        for file in tqdm(files_to_copy, desc="Copying files", unit="file"):
+            dest_path = os.path.join(temp_build_dir, os.path.relpath(file, folder_path))
+            dest_dir = os.path.dirname(dest_path)
+            if not os.path.exists(dest_dir):
+                os.makedirs(dest_dir)
+            shutil.copy2(file, dest_path)
 
-        for file, is_dir in tqdm(files, desc="Copying Files", ncols=100):
-            dest_path = os.path.join(temp_build_dir, os.path.basename(file))
-            if is_dir:
-                shutil.copytree(file, dest_path)
-            else:
-                shutil.copy2(file, dest_path)
-            progress_bar.setValue(progress_bar.value() + 1)
-
-        # Create loader script that unpacks the app when executed
+        # Создаем loader скрипт
         loader_script = os.path.join(temp_build_dir, "loader.py")
         with open(loader_script, "w") as loader:
             loader.write(f"""
@@ -52,61 +43,68 @@ import os
 import sys
 import shutil
 import subprocess
-import tempfile
 
 def main():
-    temp_dir = tempfile.mkdtemp()
-    exe_path = os.path.join(temp_dir, '{main_exe}')
+    # Папка, в которую будут распаковываться файлы
+    unpack_dir = '{output_folder}'
 
-    # Create a folder with the name of the output file
-    output_dir = os.path.join(os.getcwd(), '{output_name}')
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Убедимся, что целевая папка существует
+    if not os.path.exists(unpack_dir):
+        os.makedirs(unpack_dir)
 
-    # Extract the data
+    # Извлекаем данные из текущего исполнимого файла
     current_dir = os.path.dirname(sys.argv[0])
-    for item in os.listdir(current_dir):
-        src_path = os.path.join(current_dir, item)
-        dest_path = os.path.join(output_dir, item)
+    target_dir = os.path.join(current_dir, '{folder_name}')  # Папка с вашим приложением
+
+    # Копируем только файлы из нужной папки
+    for item in os.listdir(target_dir):
+        src_path = os.path.join(target_dir, item)
+        dest_path = os.path.join(unpack_dir, item)
+
         if os.path.isdir(src_path):
             shutil.copytree(src_path, dest_path)
         else:
             shutil.copy2(src_path, dest_path)
 
-    # Run the main app
-    subprocess.run([exe_path], cwd=output_dir)
-    shutil.rmtree(temp_dir)
+    # Запускаем основной исполнимый файл из распакованной папки
+    exe_path = os.path.join(unpack_dir, '{folder_name}', '{main_exe}')
+    subprocess.run([exe_path], cwd=os.path.join(unpack_dir, '{folder_name}'))
 
 if __name__ == "__main__":
     main()
 """)
 
-        # Build command to run PyInstaller
+        # Создаем команду для PyInstaller
         pyinstaller_cmd = [
             "pyinstaller",
-            "--onefile",  # Create a single executable file
-            "--add-data", f"{temp_build_dir}{os.pathsep}.",  # Add all data from the temp build dir
+            "--onefile",  # Собираем один файл
+            "--add-data", f"{temp_build_dir}{os.pathsep}.",  # Добавляем всю временную папку
             "--name", output_name,
             loader_script
         ]
         
-        # Add icon if provided
+        # Добавляем иконку, если указана
         if icon_path:
             pyinstaller_cmd.append(f"--icon={icon_path}")
         
-        # Add additional parameters if any
+        # Добавляем дополнительные параметры, если есть
         if additional_params:
             pyinstaller_cmd.extend(additional_params.split(";"))
 
-        # Use PyInstaller to bundle everything
-        subprocess.run(pyinstaller_cmd, check=True)
+        # Обновляем прогресс-бар для сборки с PyInstaller
+        process = subprocess.Popen(pyinstaller_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        for line in tqdm(process.stdout, desc="Building executable", unit="line"):
+            if progress_callback:
+                progress_callback(line.decode())
 
-        # Move the EXE to the selected location
+        process.wait()  # Ждем завершения процесса сборки
+
+        # Перемещаем EXE в выбранную папку
         dist_path = os.path.join(os.getcwd(), "dist", f"{output_name}.exe")
         if os.path.exists(dist_path):
             shutil.move(dist_path, output_folder)
 
-        # Remove temporary files if checkbox is selected
+        # Удаляем временные файлы, если указано
         if delete_temp_files:
             shutil.rmtree(temp_build_dir)
             spec_file = os.path.join(os.getcwd(), f"{output_name}.spec")
@@ -187,6 +185,9 @@ class AppPackager(QWidget):
         self.package_button.clicked.connect(self.package_app)
         layout.addWidget(self.package_button)
 
+        self.progress_bar = QProgressBar()
+        layout.addWidget(self.progress_bar)
+
         self.setLayout(layout)
 
     def browse_folder(self):
@@ -238,11 +239,19 @@ class AppPackager(QWidget):
             QMessageBox.critical(self, "Error", "Please provide a save location!")
             return
 
-        success = create_exe_with_dependencies(folder_path, main_exe, output_name, delete_temp_files, save_location, additional_params, icon_path)
+        # Запуск упаковки с прогрессом
+        success = create_exe_with_dependencies(folder_path, main_exe, output_name, delete_temp_files, save_location, additional_params, icon_path, self.update_progress)
         if success:
             QMessageBox.information(self, "Success", f"Application '{output_name}.exe' has been successfully created!")
         else:
             QMessageBox.critical(self, "Error", "Failed to create the application.")
+
+    def update_progress(self, message):
+        # Пример обновления прогресс-бара с помощью сообщений
+        if 'Copying' in message:
+            self.progress_bar.setValue(50)
+        elif 'Building' in message:
+            self.progress_bar.setValue(100)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
