@@ -28,7 +28,7 @@ Before you can use **PyRPF**, make sure you have the following dependencies inst
 To install the required dependencies, run the following command in your terminal or command prompt (Or use pip install -r requiremens.txt):
 
 ```bash
-pip install PySide6 requests pyinstaller tqdm
+pip install PySide6 requests pyinstaller tqdm pathlib
 ```
 
 ## How to Use:
