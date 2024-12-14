@@ -16,10 +16,10 @@ Before you can use **PyRPF**, make sure you have the following dependencies inst
 - **pyinstaller**: A tool for packaging Python programs into standalone executables.
 
 ### **Installation**:
-To install the required dependencies, run the following command in your terminal or command prompt:
+To install the required dependencies, run the following command in your terminal or command prompt (Or use pip install -r requiremens.txt):
 
 ```bash
-pip install PySide6 requests pyinstaller
+pip install PySide6 requests pyinstaller tqdm
 ```
 
 ## How to Use:
