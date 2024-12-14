@@ -5,7 +5,9 @@
 - Big files packing very long
   Possible solution? Use --noconfirm argument or another arguments that can optimize PyInstaller packing
 
-## Please contact to me in issues if you have solution of slow packing big files
+### Please contact to me in issues if you have solution of slow packing big files
+
+
 
 **PyRPF** (Python Resource Packing Framework) is a simple Python tool that allows you to create a standalone executable (`.exe`) from your Python application. The program bundles your application files and dependencies into a single executable file using **PyInstaller**. It provides an easy-to-use graphical interface to help you select the folder containing your Python application and specify the output file name.
 
