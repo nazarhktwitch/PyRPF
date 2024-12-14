@@ -1,74 +1,80 @@
-# PyRPF - Application Packager
+# **PyRPF - Application Packager**
 
-## About
-**PyRPF** stands for **Python Rapid Packager Framework**. It is a tool designed to package a ready-to-use executable application (`.exe`) along with all its necessary dependencies (e.g., DLL files, `lib` folders, `Plugins`, and other resources) into a single `.exe` file. Once packaged, the application works exactly as it did before, but everything is contained in one executable.
+**PyRPF** (Python Resource Packing Framework) is a simple Python tool that allows you to create a standalone executable (`.exe`) from your Python application. The program bundles your application files and dependencies into a single executable file using **PyInstaller**. It provides an easy-to-use graphical interface to help you select the folder containing your Python application and specify the output file name.
 
-This project also serves as an **alternative to SFX archives**, written entirely in Python.
+## **Features**:
+- **Browse for Folder**: Select the folder containing your Python application.
+- **Name Your Output File**: Provide the name for the `.exe` file that will be created.
+- **Automatic Packing**: The tool automatically packages your application, including all its files and dependencies, into a standalone `.exe` file.
+- **Cross-Platform GUI**: Built using **PySide6** for creating modern, platform-independent graphical user interfaces.
 
-## Features
-- Packages a `.exe` application with all its dependencies.
-- Supports any types of files and folders required for the application.
-- Automatically creates a self-extracting loader that unpacks dependencies and runs the main executable.
+## **Requirements**:
+Before you can use **PyRPF**, make sure you have the following dependencies installed:
 
-## Requirements
-- Python 3.8+
-- Installed dependencies from `requirements.txt`
-- Installed `PyInstaller`
-- Windows operating system
+- **PySide6**: The Qt6 bindings for Python used to create the GUI.
+- **requests**: A Python library for handling HTTP requests (though it's not directly used in the current version, it might be useful in future versions for handling file downloads or web-based services).
+- **pyinstaller**: A tool for packaging Python programs into standalone executables.
 
-## Installing Dependencies
+### **Installation**:
+To install the required dependencies, run the following command in your terminal or command prompt:
 
-Before usage, install the required dependencies:
+```bash
+pip install PySide6 requests pyinstaller
+```
+
+## How to Use:
+
+### 1. Clone or Download the Repository:
+
+You can clone the repository using Git, or download the files as a ZIP and extract them to your local machine.
+
+### 2. Install the Required Dependencies:
+
+After downloading the code, navigate to the directory containing the script and install the necessary dependencies:
+
+pip install PySide6 requests pyinstaller
+
+Or by using:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## How to Use
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/PyRPF.git
-   cd PyRPF
-   ```
+### 3. Run the Program:
 
-2. Ensure Python and dependencies are installed.
+Run the script by executing the following:
 
-3. Launch the GUI interface:
-   ```bash
-   python app_packager_gui.py
-   ```
-
-4. Select the folder containing your application (must include the `.exe` file and all necessary folders/files).
-
-5. Specify the name of the output file (`.exe`).
-
-6. Click "Package Application". After completion, a single `.exe` file will be generated in the folder.
-
-## Example Input Folder Structure
-```
-MyApp/
-├── app.exe
-├── lib/
-│   ├── some_library.dll
-│   └── another_library.dll
-├── plugins/
-│   ├── plugin1.dll
-│   └── plugin2.dll
-└── resources/
-    ├── config.json
-    └── image.png
+```bash
+python app_packager_gui.py
 ```
 
-After packaging, everything will be bundled into a single file `MyApp.exe`.
+Or by double-clicking.
 
-## Dependencies
-- PyQt5
-- PyInstaller
+This will launch the GUI application.
 
-## `requirements.txt` File
-```
-PyQt5
-pyinstaller
-```
+### 4. Using the GUI:
+
+The graphical interface will appear, and you can perform the following actions:
+
+    Browse for Folder: Click on the "Browse" button to select the folder containing your Python application.
+    Enter Output File Name: In the "Enter the output file name" field, type the name you want for the output .exe file (for example: my_application.exe).
+    Click "Package Application": Once everything is set, click the "Package Application" button to start the packaging process.
+
+The program will package your Python application into a .exe file, which will be placed in the same folder as the script.
+Example:
+
+If you have a Python project located in the folder C:/projects/my_app/ and want to create an executable named my_app.exe, you will:
+
+    Select the folder C:/projects/my_app/.
+    Enter the output file name as my_app.exe.
+    Click the Package Application button.
+
+The program will generate the my_app.exe file in the same folder.
+
+## About PyRPF:
+
+PyRPF stands for Python Resource Packing Framework. It is a tool for packaging Python applications along with their resources (such as dependencies, data files, etc.) into a single, standalone executable. This allows your Python application to run on systems without requiring a Python installation.
 
 ## License
-[MIT License](https://github.com/nazarhktwitch/PyRPF/blob/main/LICENSE)
+
+This project is under the MIT License. See LICENSE file for more.
