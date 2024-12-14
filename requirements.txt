@@ -1,4 +1,4 @@
-pyinstaller
-requests
-pyside6
-tqdm
+pyinstaller # For packing
+pyside6 # For GUI
+tqdm # For progress bar
+pathlib # For using os-friendly paths (Windows and Linux compatibility with slashes)
